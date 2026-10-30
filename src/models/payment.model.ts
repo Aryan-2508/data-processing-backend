@@ -1,4 +1,3 @@
-
 import mongoose, { Schema } from "mongoose";
 
 export interface IPayment {
@@ -8,6 +7,7 @@ export interface IPayment {
     currency: string;
     paymentMethod: "card" | "upi" | "netbanking" | "cod";
     status: "pending" | "success" | "failed" | "refunded";
+    paymentDate: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -46,6 +46,11 @@ const paymentSchema = new Schema<IPayment>(
             enum: ["pending", "success", "failed", "refunded"],
             default: "pending",
         },
+        paymentDate: {
+            type: Date,
+            default: Date.now,
+            required: true,
+        },
     },
     {
         timestamps: true,
@@ -54,6 +59,7 @@ const paymentSchema = new Schema<IPayment>(
 
 paymentSchema.index({ order: 1, createdAt: -1 });
 paymentSchema.index({ status: 1, createdAt: -1 });
+paymentSchema.index({ paymentDate: -1 });
 
 const Payment = mongoose.model<IPayment>("Payment", paymentSchema);
 

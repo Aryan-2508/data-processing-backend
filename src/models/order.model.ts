@@ -15,6 +15,7 @@ export interface IOrder {
     totalAmount: number;
     orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
     paymentStatus: "pending" | "paid" | "failed" | "refunded";
+    orderDate: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -49,6 +50,11 @@ const orderItemSchema = new Schema<IOrderItem>(
 
 const orderSchema = new Schema<IOrder>(
     {
+        orderDate: {
+            type: Date,
+            default: Date.now,
+            required: true,
+        },
         orderNumber: {
             type: String,
             required: true,
@@ -95,6 +101,7 @@ const orderSchema = new Schema<IOrder>(
     }
 );
 
+orderSchema.index({ orderDate: -1 });
 orderSchema.index({ customer: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 
