@@ -12,6 +12,7 @@ import useDashboard from "../hooks/useDashboard";
 import MonthlyRevenueChart from "./MonthlyRevenueChart";
 import RevenueByCategoryChart from "./RevenueByCategoryChart";
 import PaymentStatusChart from "./PaymentStatusChart";
+import MonthlyOrdersChart from "./MonthlyOrdersChart";
 
 function DashboardPage() {
     const { dashboardData, loading, error } = useDashboard();
@@ -97,30 +98,25 @@ function DashboardPage() {
 
             </div>
 
-            {dashboardData && (
-                <div className="mt-8">
-                    <MonthlyRevenueChart
-                        data={dashboardData.monthlyRevenue}
-                    />
-                </div>
-            )}
+            <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-2">
 
-            {dashboardData && (
-                <div className="mt-8">
-                    <RevenueByCategoryChart
-                        data={dashboardData.RevenueByCategory}
-                    />
-                </div>
-            )}
+                <MonthlyRevenueChart
+                    data={dashboardData.monthlyRevenue}
+                />
 
-            {dashboardData && (
-                <div className="mt-8">
-                    <PaymentStatusChart
-                        data={dashboardData.paymentStatusDistribution}
-                    />
-                </div>
-            )}
+                <RevenueByCategoryChart
+                    data={dashboardData.RevenueByCategory}
+                />
 
+                <PaymentStatusChart
+                    data={dashboardData.paymentStatusDistribution}
+                />
+
+                <MonthlyOrdersChart
+                    data={dashboardData.monthlyOrders}
+                />
+
+            </div>
         </div>
     );
 }

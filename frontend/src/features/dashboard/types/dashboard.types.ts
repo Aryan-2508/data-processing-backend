@@ -16,6 +16,14 @@ export interface PaymentStatusDistribution {
     count: number;
 }
 
+export interface MonthlyOrders {
+    _id: {
+        year: number;
+        month: number;
+    };
+    totalOrders: number;
+}
+
 export interface DashboardAnalytics {
     totalCustomers: number;
     totalProducts: number;
@@ -28,6 +36,7 @@ export interface DashboardAnalytics {
     RevenueByCategory: RevenueByCategory[];
     monthlyRevenue: MonthlyRevenue[];
     paymentStatusDistribution: PaymentStatusDistribution[];
+    monthlyOrders: MonthlyOrders[];
     executionTime: string;
 }
 
