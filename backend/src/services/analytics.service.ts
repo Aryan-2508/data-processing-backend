@@ -3,14 +3,10 @@ import Product from "../models/product.model";
 import Order from "../models/order.model";
 import Payment from "../models/payment.model";
 
-export const getDashboardAnalytics = async () => {
-
-    const currentYear = new Date().getFullYear();
-
-    const startDate = new Date(currentYear, 0, 1);
-    const endDate = new Date(currentYear + 1, 0, 1);
-
-    const startTime = performance.now();
+export const getDashboardAnalytics = async (
+    start: Date,
+    end: Date
+) => {
 
     const [
         totalCustomers,
@@ -30,14 +26,27 @@ export const getDashboardAnalytics = async () => {
 
         Product.countDocuments(),
 
-        Order.countDocuments(),
+        Order.countDocuments({
+            orderDate: {
+                $gte: start,
+                $lte: end,
+            },
+        }),
 
         Order.countDocuments({
             orderStatus: "pending",
+            orderDate: {
+                $gte: start,
+                $lte: end,
+            },
         }),
 
         Payment.countDocuments({
             status: "success",
+            paymentDate: {
+                $gte: start,
+                $lte: end,
+            },
         }),
 
         // Total revenue
@@ -45,6 +54,10 @@ export const getDashboardAnalytics = async () => {
             {
                 $match: {
                     status: "success",
+                    paymentDate: {
+                        $gte: start,
+                        $lte: end,
+                    },
                 },
             },
             {
@@ -62,6 +75,10 @@ export const getDashboardAnalytics = async () => {
             {
                 $match: {
                     status: "success",
+                    paymentDate: {
+                        $gte: start,
+                        $lte: end,
+                    }
                 },
             },
             {
@@ -90,6 +107,10 @@ export const getDashboardAnalytics = async () => {
             {
                 $match: {
                     status: "success",
+                    paymentDate: {
+                        $gte: start,
+                        $lte: end,
+                    }
                 },
             },
             {
@@ -150,8 +171,8 @@ export const getDashboardAnalytics = async () => {
                 $match: {
                     status: "success",
                     paymentDate: {
-                        $gte: startDate,
-                        $lt: endDate,
+                        $gte: start,
+                        $lte: end,
                     },
                 },
             },
@@ -178,8 +199,8 @@ export const getDashboardAnalytics = async () => {
             {
                 $match: {
                     orderDate: {
-                        $gte: startDate,
-                        $lt: endDate,
+                        $gte: start,
+                        $lte: end,
                     },
                 },
             },
@@ -202,6 +223,12 @@ export const getDashboardAnalytics = async () => {
         // Payment status distribution
         Payment.aggregate([
             {
+                $match: {
+                    paymentDate: {
+                        $gte: start,
+                        $lte: end,
+                    },
+                },
                 $group: {
                     _id: "$status",
                     count: {

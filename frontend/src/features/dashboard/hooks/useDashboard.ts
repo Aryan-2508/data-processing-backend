@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { getDashboardData } from "../services/dashboard.service";
-import type { DashboardAnalytics } from "../types/dashboard.types";
+import type { DashboardAnalytics, DashboardFilters } from "../types/dashboard.types";
 
-function useDashboard() {
+function useDashboard(filters: DashboardFilters) {
     const [dashboardData, setDashboardData] =
         useState<DashboardAnalytics | null>(null);
 
@@ -16,7 +16,7 @@ function useDashboard() {
                 setLoading(true);
                 setError(null);
 
-                const response = await getDashboardData();
+                const response = await getDashboardData(filters);
 
                 if (!response.success) {
                     throw new Error(response.message);
@@ -35,7 +35,7 @@ function useDashboard() {
         };
 
         fetchDashboard();
-    }, []);
+    }, [filters.startDate, filters.endDate]);
 
     return {
         dashboardData,

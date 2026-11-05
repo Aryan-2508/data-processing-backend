@@ -7,6 +7,10 @@ import {
     CreditCard,
 } from "lucide-react";
 
+
+import { useState } from "react";
+import type { DashboardFilters } from "../types/dashboard.types";
+
 import KPICard from "./KPICard";
 import useDashboard from "../hooks/useDashboard";
 import MonthlyRevenueChart from "./MonthlyRevenueChart";
@@ -15,7 +19,20 @@ import PaymentStatusChart from "./PaymentStatusChart";
 import MonthlyOrdersChart from "./MonthlyOrdersChart";
 
 function DashboardPage() {
-    const { dashboardData, loading, error } = useDashboard();
+
+    const [filters, setFilters] = useState<DashboardFilters>(() => {
+        const today = new Date();
+
+        const endDate =
+            `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+        return {
+            startDate: `${today.getFullYear()}-01-01`,
+            endDate
+        };
+    });
+
+    const { dashboardData, loading, error } = useDashboard(filters);
 
     if (loading) {
         return (
@@ -50,6 +67,52 @@ function DashboardPage() {
                 <p className="mt-1 text-sm text-slate-500">
                     Here's an overview of your store's performance.
                 </p>
+            </div>
+
+            <div className="mb-8 flex flex-wrap items-end gap-4">
+                <div>
+                    <label
+                        htmlFor="startDate"
+                        className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                        Start Date
+                    </label>
+
+                    <input
+                        id="startDate"
+                        type="date"
+                        value={filters.startDate}
+                        onChange={(event) =>
+                            setFilters((previousFilters) => ({
+                                ...previousFilters,
+                                startDate: event.target.value
+                            }))
+                        }
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="endDate"
+                        className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                        End Date
+                    </label>
+
+                    <input
+                        id="endDate"
+                        type="date"
+                        value={filters.endDate}
+                        onChange={(event) =>
+                            setFilters((previousFilters) => ({
+                                ...previousFilters,
+                                endDate: event.target.value
+                            }))
+                        }
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">

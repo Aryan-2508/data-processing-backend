@@ -45,3 +45,8 @@ export interface DashboardApiResponse {
     message: string;
     data: DashboardAnalytics;
 }
+
+export interface DashboardFilters {
+    startDate: string;
+    endDate: string;
+}
