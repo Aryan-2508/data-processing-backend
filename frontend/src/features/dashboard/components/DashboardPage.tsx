@@ -7,7 +7,6 @@ import {
     CreditCard,
 } from "lucide-react";
 
-
 import { useState } from "react";
 import type { DashboardFilters } from "../types/dashboard.types";
 
@@ -20,19 +19,44 @@ import MonthlyOrdersChart from "./MonthlyOrdersChart";
 
 function DashboardPage() {
 
-    const [filters, setFilters] = useState<DashboardFilters>(() => {
-        const today = new Date();
-
-        const endDate =
-            `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-        return {
-            startDate: `${today.getFullYear()}-01-01`,
-            endDate
-        };
+    // Selected date filters
+    const [filters, setFilters] = useState<DashboardFilters>({
+        startDate: "",
+        endDate: "",
     });
 
-    const { dashboardData, loading, error } = useDashboard(filters);
+    // Applied date filters
+    const [appliedFilters, setAppliedFilters] = useState<DashboardFilters>({
+        startDate: "",
+        endDate: "",
+    });
+
+    const { dashboardData, loading, error } = useDashboard(appliedFilters);
+
+
+    // Apply date filters
+    const handleApplyFilters = () => {
+
+        if (
+            (filters.startDate && !filters.endDate) ||
+            (!filters.startDate && filters.endDate)
+        ) {
+            alert("Please select both start date and end date.");
+            return;
+        }
+
+        if (
+            filters.startDate &&
+            filters.endDate &&
+            filters.startDate > filters.endDate
+        ) {
+            alert("Start date cannot be later than end date.");
+            return;
+        }
+
+        setAppliedFilters(filters);
+    };
+
 
     if (loading) {
         return (
@@ -48,17 +72,27 @@ function DashboardPage() {
                 <p className="font-medium text-red-600">
                     Failed to load dashboard
                 </p>
-                <p className="mt-1 text-sm text-red-500">{error}</p>
+
+                <p className="mt-1 text-sm text-red-500">
+                    {error}
+                </p>
             </div>
         );
     }
 
     if (!dashboardData) {
-        return <p className="text-slate-500">No dashboard data available.</p>;
+        return (
+            <p className="text-slate-500">
+                No dashboard data available.
+            </p>
+        );
     }
+
 
     return (
         <div>
+
+            {/* Dashboard Heading */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-slate-800">
                     Dashboard Overview
@@ -69,7 +103,11 @@ function DashboardPage() {
                 </p>
             </div>
 
+
+            {/* Date Filters */}
             <div className="mb-8 flex flex-wrap items-end gap-4">
+
+                {/* Start Date */}
                 <div>
                     <label
                         htmlFor="startDate"
@@ -85,13 +123,15 @@ function DashboardPage() {
                         onChange={(event) =>
                             setFilters((previousFilters) => ({
                                 ...previousFilters,
-                                startDate: event.target.value
+                                startDate: event.target.value,
                             }))
                         }
                         className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                     />
                 </div>
 
+
+                {/* End Date */}
                 <div>
                     <label
                         htmlFor="endDate"
@@ -107,15 +147,29 @@ function DashboardPage() {
                         onChange={(event) =>
                             setFilters((previousFilters) => ({
                                 ...previousFilters,
-                                endDate: event.target.value
+                                endDate: event.target.value,
                             }))
                         }
                         className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                     />
                 </div>
+
+
+                {/* Apply Filters Button */}
+                <button
+                    onClick={handleApplyFilters}
+                    disabled={loading}
+                    className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Apply Filters
+                </button>
+
             </div>
 
+
+            {/* KPI Cards */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+
                 <KPICard
                     title="Total Revenue"
                     value={`₹${dashboardData.totalRevenue.toLocaleString("en-IN")}`}
@@ -158,9 +212,10 @@ function DashboardPage() {
                     description="Successfully completed payments"
                 />
 
-
             </div>
 
+
+            {/* Dashboard Charts */}
             <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-2">
 
                 <MonthlyRevenueChart
@@ -180,6 +235,7 @@ function DashboardPage() {
                 />
 
             </div>
+
         </div>
     );
 }
