@@ -16,6 +16,10 @@ export const getDashboardData = async (
         ...(filters.endDate && {
             endDate: filters.endDate
         }),
+
+        ...(filters.category && {
+            category: filters.category
+        }),
     };
 
     const response = await api.get<DashboardApiResponse>(

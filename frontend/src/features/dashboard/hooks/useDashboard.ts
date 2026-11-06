@@ -35,7 +35,7 @@ function useDashboard(filters: DashboardFilters) {
         };
 
         fetchDashboard();
-    }, [filters.startDate, filters.endDate]);
+    }, [filters.startDate, filters.endDate, filters.category]);
 
     return {
         dashboardData,

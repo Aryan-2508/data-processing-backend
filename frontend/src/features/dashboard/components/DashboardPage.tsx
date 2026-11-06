@@ -19,22 +19,24 @@ import MonthlyOrdersChart from "./MonthlyOrdersChart";
 
 function DashboardPage() {
 
-    // Selected date filters
+    // Selected filters
     const [filters, setFilters] = useState<DashboardFilters>({
         startDate: "",
         endDate: "",
+        category: "",
     });
 
-    // Applied date filters
+    // Applied filters
     const [appliedFilters, setAppliedFilters] = useState<DashboardFilters>({
         startDate: "",
         endDate: "",
+        category: "",
     });
 
     const { dashboardData, loading, error } = useDashboard(appliedFilters);
 
 
-    // Apply date filters
+    // Apply filters
     const handleApplyFilters = () => {
 
         if (
@@ -104,7 +106,7 @@ function DashboardPage() {
             </div>
 
 
-            {/* Date Filters */}
+            {/* Dashboard Filters */}
             <div className="mb-8 flex flex-wrap items-end gap-4">
 
                 {/* Start Date */}
@@ -152,6 +154,39 @@ function DashboardPage() {
                         }
                         className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                     />
+                </div>
+
+
+                {/* Category Filter */}
+                <div>
+                    <label
+                        htmlFor="category"
+                        className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                        Category
+                    </label>
+
+                    <select
+                        id="category"
+                        value={filters.category}
+                        onChange={(event) =>
+                            setFilters((previousFilters) => ({
+                                ...previousFilters,
+                                category: event.target.value,
+                            }))
+                        }
+                        className="min-w-48 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    >
+                        <option value="">
+                            All Categories
+                        </option>
+
+                        {dashboardData.categories.map((category) => (
+                            <option key={category} value={category}>
+                                {category}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
 

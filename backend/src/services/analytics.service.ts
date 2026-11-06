@@ -14,51 +14,73 @@ const getMonthsInRange = (
 ) => {
     const months: { year: number; month: number }[] = [];
 
-    let firstMonth: number;
-    let lastMonth: number;
+    let currentMonth: Date;
+    let lastMonth: Date;
 
     if (start && end) {
+        // Start from the first day of the selected starting month
+        currentMonth = new Date(
+            Date.UTC(
+                start.getUTCFullYear(),
+                start.getUTCMonth(),
+                1
+            )
+        );
 
-        firstMonth =
-            start.getUTCFullYear() * 12 + start.getUTCMonth();
+        // End at the first day of the selected ending month
+        lastMonth = new Date(
+            Date.UTC(
+                end.getUTCFullYear(),
+                end.getUTCMonth(),
+                1
+            )
+        );
 
-        lastMonth =
-            end.getUTCFullYear() * 12 + end.getUTCMonth();
-
-    } else {
-
-        // Combine available months from orders and revenue
+    } 
+    else {
+        // Get all available months from database results
         const availableMonths = [
             ...monthlyOrders,
             ...monthlyRevenue,
         ].map((item: any) => {
-            return (
-                item._id.year * 12 +
-                item._id.month - 1
+            return new Date(
+                Date.UTC(
+                    item._id.year,
+                    item._id.month - 1,
+                    1
+                )
             );
         });
 
-        // No records available
+        // Return empty array if no data exists
         if (availableMonths.length === 0) {
             return months;
         }
 
-        firstMonth = Math.min(...availableMonths);
-        lastMonth = Math.max(...availableMonths);
+        // Sort months chronologically
+        availableMonths.sort(
+            (a, b) => a.getTime() - b.getTime()
+        );
+
+        // Get earliest and latest available months
+        currentMonth = new Date(availableMonths[0]);
+
+        lastMonth = new Date(
+            availableMonths[availableMonths.length - 1]
+        );
     }
 
-    for (
-        let currentMonth = firstMonth;
-        currentMonth <= lastMonth;
-        currentMonth++
-    ) {
-        const year = Math.floor(currentMonth / 12);
-        const month = (currentMonth % 12) + 1;
-
+    // Generate every month between the dates
+    while (currentMonth <= lastMonth) {
         months.push({
-            year,
-            month,
+            year: currentMonth.getUTCFullYear(),
+            month: currentMonth.getUTCMonth() + 1,
         });
+
+        // Move to the next month
+        currentMonth.setUTCMonth(
+            currentMonth.getUTCMonth() + 1
+        );
     }
 
     return months;
@@ -67,7 +89,8 @@ const getMonthsInRange = (
 
 export const getDashboardAnalytics = async (
     start?: Date,
-    end?: Date
+    end?: Date,
+    category?: string
 ) => {
 
     const startTime = performance.now();
@@ -79,9 +102,6 @@ export const getDashboardAnalytics = async (
 
 
     // Dynamic date conditions
-    // Custom range when dates are provided
-    // All historical data up to today when dates are not provided
-
     const orderMatch = start && end
         ? {
             orderDate: {
@@ -116,16 +136,16 @@ export const getDashboardAnalytics = async (
         totalProducts,
         categories,
         orderAnalytics,
-        paymentAnalytics
+        paymentAnalytics,
     ] = await Promise.all([
 
-        // Total customers
+        // Total customers (all-time)
         Customer.countDocuments(),
 
-        // Total products
+        // Total products (all-time)
         Product.countDocuments(),
 
-        // Get all available product categories
+        // All available product categories
         Product.distinct("category"),
 
         // Order analytics
@@ -134,6 +154,24 @@ export const getDashboardAnalytics = async (
             {
                 $match: orderMatch,
             },
+
+            ...(category
+                ? [
+                    {
+                        $lookup: {
+                            from: "products",
+                            localField: "items.product",
+                            foreignField: "_id",
+                            as: "orderProducts",
+                        },
+                    },
+                    {
+                        $match: {
+                            "orderProducts.category": category,
+                        },
+                    },
+                ]
+                : []),
 
             {
                 $facet: {
@@ -144,7 +182,6 @@ export const getDashboardAnalytics = async (
                             $count: "count",
                         },
                     ],
-
 
                     // Pending orders
                     pendingOrders: [
@@ -157,7 +194,6 @@ export const getDashboardAnalytics = async (
                             $count: "count",
                         },
                     ],
-
 
                     // Monthly orders
                     monthlyOrders: [
@@ -197,14 +233,75 @@ export const getDashboardAnalytics = async (
                 $match: paymentMatch,
             },
 
+            // Find the related order
+            {
+                $lookup: {
+                    from: "orders",
+                    localField: "order",
+                    foreignField: "_id",
+                    as: "orderDetails",
+                },
+            },
+
+            {
+                $unwind: "$orderDetails",
+            },
+
+            // Separate order items
+            {
+                $unwind: "$orderDetails.items",
+            },
+
+            // Find each item's product
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "orderDetails.items.product",
+                    foreignField: "_id",
+                    as: "productDetails",
+                },
+            },
+
+            {
+                $unwind: "$productDetails",
+            },
+
+            // Filter individual products by category
+            ...(category
+                ? [
+                    {
+                        $match: {
+                            "productDetails.category": category,
+                        },
+                    },
+                ]
+                : []),
+
+            // Calculate revenue for each item
+            {
+                $addFields: {
+                    itemRevenue: {
+                        $multiply: [
+                            "$orderDetails.items.quantity",
+                            "$orderDetails.items.unitPrice",
+                        ],
+                    },
+                },
+            },
+
             {
                 $facet: {
 
-                    // Successful payments
+                    // Count unique successful payments
                     successfulPayments: [
                         {
                             $match: {
                                 status: "success",
+                            },
+                        },
+                        {
+                            $group: {
+                                _id: "$_id",
                             },
                         },
                         {
@@ -224,7 +321,7 @@ export const getDashboardAnalytics = async (
                             $group: {
                                 _id: null,
                                 totalRevenue: {
-                                    $sum: "$amount",
+                                    $sum: "$itemRevenue",
                                 },
                             },
                         },
@@ -237,17 +334,6 @@ export const getDashboardAnalytics = async (
                             $match: {
                                 status: "success",
                             },
-                        },
-                        {
-                            $lookup: {
-                                from: "orders",
-                                localField: "order",
-                                foreignField: "_id",
-                                as: "orderDetails",
-                            },
-                        },
-                        {
-                            $unwind: "$orderDetails",
                         },
                         {
                             $group: {
@@ -268,40 +354,10 @@ export const getDashboardAnalytics = async (
                             },
                         },
                         {
-                            $lookup: {
-                                from: "orders",
-                                localField: "order",
-                                foreignField: "_id",
-                                as: "orderDetails",
-                            },
-                        },
-                        {
-                            $unwind: "$orderDetails",
-                        },
-                        {
-                            $unwind: "$orderDetails.items",
-                        },
-                        {
-                            $lookup: {
-                                from: "products",
-                                localField: "orderDetails.items.product",
-                                foreignField: "_id",
-                                as: "productDetails",
-                            },
-                        },
-                        {
-                            $unwind: "$productDetails",
-                        },
-                        {
                             $group: {
                                 _id: "$productDetails.category",
                                 totalRevenue: {
-                                    $sum: {
-                                        $multiply: [
-                                            "$orderDetails.items.quantity",
-                                            "$orderDetails.items.unitPrice",
-                                        ],
-                                    },
+                                    $sum: "$itemRevenue",
                                 },
                             },
                         },
@@ -338,7 +394,7 @@ export const getDashboardAnalytics = async (
                                     },
                                 },
                                 totalRevenue: {
-                                    $sum: "$amount",
+                                    $sum: "$itemRevenue",
                                 },
                             },
                         },
@@ -355,7 +411,15 @@ export const getDashboardAnalytics = async (
                     paymentStatusDistribution: [
                         {
                             $group: {
-                                _id: "$status",
+                                _id: {
+                                    paymentId: "$_id",
+                                    status: "$status",
+                                },
+                            },
+                        },
+                        {
+                            $group: {
+                                _id: "$_id.status",
                                 count: {
                                     $sum: 1,
                                 },

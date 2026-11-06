@@ -27,6 +27,7 @@ export interface MonthlyOrders {
 export interface DashboardAnalytics {
     totalCustomers: number;
     totalProducts: number;
+    categories: string[];
     totalOrders: number;
     totalRevenue: number;
     pendingOrders: number;
@@ -49,4 +50,5 @@ export interface DashboardApiResponse {
 export interface DashboardFilters {
     startDate: string;
     endDate: string;
+    category: string;
 }
