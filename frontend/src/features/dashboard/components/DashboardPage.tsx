@@ -19,6 +19,8 @@ import MonthlyOrdersChart from "./MonthlyOrdersChart";
 
 function DashboardPage() {
 
+    const dataStartDate = "2020-01-01";
+
     // Selected filters
     const [filters, setFilters] = useState<DashboardFilters>({
         startDate: "",
@@ -33,8 +35,15 @@ function DashboardPage() {
         category: "",
     });
 
-    const { dashboardData, loading, error } = useDashboard(appliedFilters);
+    const now = new Date();
 
+    const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const { dashboardData, loading, error } = useDashboard(appliedFilters);
 
     // Apply filters
     const handleApplyFilters = () => {
@@ -53,6 +62,14 @@ function DashboardPage() {
             filters.startDate > filters.endDate
         ) {
             alert("Start date cannot be later than end date.");
+            return;
+        }
+
+        if (
+            (filters.startDate && filters.startDate > today) ||
+            (filters.endDate && filters.endDate > today)
+        ) {
+            alert("Dates cannot be in the future.");
             return;
         }
 
@@ -121,6 +138,8 @@ function DashboardPage() {
                     <input
                         id="startDate"
                         type="date"
+                        min={dataStartDate}
+                        max={filters.endDate || today}
                         value={filters.startDate}
                         onChange={(event) =>
                             setFilters((previousFilters) => ({
@@ -145,6 +164,8 @@ function DashboardPage() {
                     <input
                         id="endDate"
                         type="date"
+                        min={filters.startDate || dataStartDate}
+                        max={today}
                         value={filters.endDate}
                         onChange={(event) =>
                             setFilters((previousFilters) => ({

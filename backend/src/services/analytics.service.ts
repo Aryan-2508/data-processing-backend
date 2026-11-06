@@ -36,8 +36,7 @@ const getMonthsInRange = (
             )
         );
 
-    } 
-    else {
+    } else {
         // Get all available months from database results
         const availableMonths = [
             ...monthlyOrders,
@@ -130,6 +129,13 @@ export const getDashboardAnalytics = async (
         };
 
 
+    // Get product IDs belonging to the selected category
+    // This must run before Promise.all because both aggregations use these IDs.
+    const categoryProductIds: any[] = category
+        ? await Product.distinct("_id", { category })
+        : [];
+
+
     // Run independent database operations concurrently
     const [
         totalCustomers,
@@ -155,19 +161,14 @@ export const getDashboardAnalytics = async (
                 $match: orderMatch,
             },
 
+            // Filter orders using product IDs instead of looking up products
             ...(category
                 ? [
                     {
-                        $lookup: {
-                            from: "products",
-                            localField: "items.product",
-                            foreignField: "_id",
-                            as: "orderProducts",
-                        },
-                    },
-                    {
                         $match: {
-                            "orderProducts.category": category,
+                            "items.product": {
+                                $in: categoryProductIds,
+                            },
                         },
                     },
                 ]
@@ -252,26 +253,15 @@ export const getDashboardAnalytics = async (
                 $unwind: "$orderDetails.items",
             },
 
-            // Find each item's product
-            {
-                $lookup: {
-                    from: "products",
-                    localField: "orderDetails.items.product",
-                    foreignField: "_id",
-                    as: "productDetails",
-                },
-            },
-
-            {
-                $unwind: "$productDetails",
-            },
-
-            // Filter individual products by category
+            // Filter individual items using product IDs
+            // This avoids looking up products just to check their category.
             ...(category
                 ? [
                     {
                         $match: {
-                            "productDetails.category": category,
+                            "orderDetails.items.product": {
+                                $in: categoryProductIds,
+                            },
                         },
                     },
                 ]
@@ -347,33 +337,76 @@ export const getDashboardAnalytics = async (
 
 
                     // Revenue by category
-                    revenueByCategory: [
-                        {
-                            $match: {
-                                status: "success",
-                            },
-                        },
-                        {
-                            $group: {
-                                _id: "$productDetails.category",
-                                totalRevenue: {
-                                    $sum: "$itemRevenue",
+                    revenueByCategory: category
+                        ? [
+                            // Category is already known because we filtered
+                            // items using categoryProductIds.
+                            {
+                                $match: {
+                                    status: "success",
                                 },
                             },
-                        },
-                        {
-                            $project: {
-                                _id: 0,
-                                category: "$_id",
-                                totalRevenue: 1,
+                            {
+                                $group: {
+                                    _id: category,
+                                    totalRevenue: {
+                                        $sum: "$itemRevenue",
+                                    },
+                                },
                             },
-                        },
-                        {
-                            $sort: {
-                                totalRevenue: -1,
+                            {
+                                $project: {
+                                    _id: 0,
+                                    category: "$_id",
+                                    totalRevenue: 1,
+                                },
                             },
-                        },
-                    ],
+                            {
+                                $sort: {
+                                    totalRevenue: -1,
+                                },
+                            },
+                        ]
+                        : [
+                            // Look up products only when category-wise
+                            // revenue needs product categories.
+                            {
+                                $lookup: {
+                                    from: "products",
+                                    localField: "orderDetails.items.product",
+                                    foreignField: "_id",
+                                    as: "productDetails",
+                                },
+                            },
+                            {
+                                $unwind: "$productDetails",
+                            },
+                            {
+                                $match: {
+                                    status: "success",
+                                },
+                            },
+                            {
+                                $group: {
+                                    _id: "$productDetails.category",
+                                    totalRevenue: {
+                                        $sum: "$itemRevenue",
+                                    },
+                                },
+                            },
+                            {
+                                $project: {
+                                    _id: 0,
+                                    category: "$_id",
+                                    totalRevenue: 1,
+                                },
+                            },
+                            {
+                                $sort: {
+                                    totalRevenue: -1,
+                                },
+                            },
+                        ],
 
 
                     // Monthly revenue
@@ -409,6 +442,8 @@ export const getDashboardAnalytics = async (
 
                     // Payment status distribution
                     paymentStatusDistribution: [
+                        // One payment can have multiple order items.
+                        // Group by payment ID to count it only once.
                         {
                             $group: {
                                 _id: {

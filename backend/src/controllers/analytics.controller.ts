@@ -7,6 +7,11 @@ export const getDashboard = async (
     next: NextFunction
 ): Promise<void> => {
     try {
+
+        const controllerStartTime = performance.now();
+
+        console.log("Request reached analytics controller");
+
         const { startDate, endDate, category } = req.query;
 
         let start: Date | undefined;
@@ -71,6 +76,15 @@ export const getDashboard = async (
             start,
             end,
             selectedCategory
+        );
+
+        console.log("Dashboard analytics completed");
+
+
+        const controllerEndTime = performance.now();
+
+        console.log(
+            `Controller Processing Time: ${(controllerEndTime - controllerStartTime).toFixed(2)} ms`
         );
 
         res.status(200).json({

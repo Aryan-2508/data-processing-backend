@@ -16,7 +16,15 @@ function useDashboard(filters: DashboardFilters) {
                 setLoading(true);
                 setError(null);
 
+                const requestStartTime = performance.now();
+
                 const response = await getDashboardData(filters);
+
+                const requestEndTime = performance.now();
+
+                const executionTime = (requestEndTime - requestStartTime);
+
+                console.log("Dashboard API request execution time:", executionTime, "ms");
 
                 if (!response.success) {
                     throw new Error(response.message);
