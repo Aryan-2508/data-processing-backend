@@ -2,10 +2,11 @@ import Customer from "../models/customer.model";
 import Product from "../models/product.model";
 import Order from "../models/order.model";
 import Payment from "../models/payment.model";
+import { Orders } from "../enum/models";
 
 
 // Generate every month between the selected dates.
-// If no dates are selected, determine the range from actual database results.
+// If no dates are selected, use the current year.
 const getMonthsInRange = (
     start: Date | undefined,
     end: Date | undefined,
@@ -37,35 +38,15 @@ const getMonthsInRange = (
         );
 
     } else {
-        // Get all available months from database results
-        const availableMonths = [
-            ...monthlyOrders,
-            ...monthlyRevenue,
-        ].map((item: any) => {
-            return new Date(
-                Date.UTC(
-                    item._id.year,
-                    item._id.month - 1,
-                    1
-                )
-            );
-        });
+        // Default range: January to December of the current year
+        const currentYear = new Date().getFullYear();
 
-        // Return empty array if no data exists
-        if (availableMonths.length === 0) {
-            return months;
-        }
-
-        // Sort months chronologically
-        availableMonths.sort(
-            (a, b) => a.getTime() - b.getTime()
+        currentMonth = new Date(
+            Date.UTC(currentYear, 0, 1)
         );
 
-        // Get earliest and latest available months
-        currentMonth = new Date(availableMonths[0]);
-
         lastMonth = new Date(
-            availableMonths[availableMonths.length - 1]
+            Date.UTC(currentYear, 11, 1)
         );
     }
 
@@ -94,39 +75,40 @@ export const getDashboardAnalytics = async (
 
     const startTime = performance.now();
 
-    // Current date: exclude future-dated records
+    // Current date
     const today = new Date();
 
+    // End of today
     today.setUTCHours(23, 59, 59, 999);
+
+    // Start of the current year
+    const currentYear = new Date().getUTCFullYear();
+
+    const currentYearStart = new Date(
+        Date.UTC(currentYear, 0, 1)
+    );
+
+
+    // Default date range: current year to today
+    const startDate = start ?? currentYearStart;
+    const endDate = end ?? today;
 
 
     // Dynamic date conditions
-    const orderMatch = start && end
-        ? {
-            orderDate: {
-                $gte: start,
-                $lte: end,
-            },
-        }
-        : {
-            orderDate: {
-                $lte: today,
-            },
-        };
+    const orderMatch = {
+        orderDate: {
+            $gte: startDate,
+            $lte: endDate,
+        },
+    };
 
 
-    const paymentMatch = start && end
-        ? {
-            paymentDate: {
-                $gte: start,
-                $lte: end,
-            },
-        }
-        : {
-            paymentDate: {
-                $lte: today,
-            },
-        };
+    const paymentMatch = {
+        paymentDate: {
+            $gte: startDate,
+            $lte: endDate,
+        },
+    };
 
 
     // Get product IDs belonging to the selected category
@@ -205,7 +187,7 @@ export const getDashboardAnalytics = async (
                                         $year: "$orderDate",
                                     },
                                     month: {
-                                        $month: "$orderDate",
+                                        $month: "$" + Orders.OrderDate,
                                     },
                                 },
                                 totalOrders: {
@@ -254,7 +236,6 @@ export const getDashboardAnalytics = async (
             },
 
             // Filter individual items using product IDs
-            // This avoids looking up products just to check their category.
             ...(category
                 ? [
                     {
@@ -339,8 +320,6 @@ export const getDashboardAnalytics = async (
                     // Revenue by category
                     revenueByCategory: category
                         ? [
-                            // Category is already known because we filtered
-                            // items using categoryProductIds.
                             {
                                 $match: {
                                     status: "success",
@@ -368,8 +347,6 @@ export const getDashboardAnalytics = async (
                             },
                         ]
                         : [
-                            // Look up products only when category-wise
-                            // revenue needs product categories.
                             {
                                 $lookup: {
                                     from: "products",

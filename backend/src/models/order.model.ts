@@ -1,5 +1,6 @@
 
 import mongoose, { Schema } from "mongoose";
+import { Orders } from "../enum/models";
 
 export interface IOrderItem {
     product: mongoose.Types.ObjectId;
@@ -50,7 +51,7 @@ const orderItemSchema = new Schema<IOrderItem>(
 
 const orderSchema = new Schema<IOrder>(
     {
-        orderDate: {
+        [Orders.OrderDate]: {
             type: Date,
             default: Date.now,
             required: true,

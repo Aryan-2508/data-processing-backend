@@ -21,20 +21,6 @@ function DashboardPage() {
 
     const dataStartDate = "2020-01-01";
 
-    // Selected filters
-    const [filters, setFilters] = useState<DashboardFilters>({
-        startDate: "",
-        endDate: "",
-        category: "",
-    });
-
-    // Applied filters
-    const [appliedFilters, setAppliedFilters] = useState<DashboardFilters>({
-        startDate: "",
-        endDate: "",
-        category: "",
-    });
-
     const now = new Date();
 
     const today = [
@@ -42,6 +28,30 @@ function DashboardPage() {
         String(now.getMonth() + 1).padStart(2, "0"),
         String(now.getDate()).padStart(2, "0"),
     ].join("-");
+
+    const currentYearStart = `${now.getFullYear()}-01-01`;
+
+    // Selected filters
+    const [filters, setFilters] = useState<DashboardFilters>({
+        startDate: currentYearStart,
+        endDate: today,
+        category: "",
+    });
+
+    // Applied filters
+    const [appliedFilters, setAppliedFilters] = useState<DashboardFilters>({
+        startDate: currentYearStart,
+        endDate: today,
+        category: "",
+    });
+
+    // const now = new Date();
+
+    // const today = [
+    //     now.getFullYear(),
+    //     String(now.getMonth() + 1).padStart(2, "0"),
+    //     String(now.getDate()).padStart(2, "0"),
+    // ].join("-");
 
     const { dashboardData, loading, error } = useDashboard(appliedFilters);
 
